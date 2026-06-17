@@ -1,0 +1,294 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { ArrowRight, CheckCircle2, Clock3, FileSignature, Loader2, TriangleAlert } from "lucide-react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { approvalFlow, commandMetrics, liveEvents, moduleProfiles, trendData } from "@/lib/data";
+import { useWorkspaceStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
+import { Button } from "./button";
+
+const workflowRules = [
+  { when: "Payment amount exceeds $50,000", if: "Cost center is Operations", then: "Require CFO approval" },
+  { when: "Stock forecast drops below reorder point", if: "Supplier lead time exceeds 7 days", then: "Create purchase request" },
+  { when: "Vehicle service date is within 14 days", if: "Mileage exceeds service interval", then: "Notify Fleet Manager" },
+];
+
+export function CommandCenter() {
+  const { activeModule, viewMode, setViewMode } = useWorkspaceStore();
+  const module = moduleProfiles[activeModule as keyof typeof moduleProfiles];
+
+  return (
+    <div className="px-6 py-6">
+      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+        <section className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-5">
+            {commandMetrics.map((metric, index) => (
+              <motion.div
+                key={metric.label}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+                className="panel p-4"
+              >
+                <div className="text-xs font-medium uppercase text-muted">{metric.label}</div>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-2xl font-semibold">{metric.value}</span>
+                  <span className="text-sm text-muted">{metric.unit}</span>
+                </div>
+                <div
+                  className={cn(
+                    "mt-3 text-xs font-medium",
+                    metric.tone === "success" && "text-success",
+                    metric.tone === "warning" && "text-warning",
+                    metric.tone === "danger" && "text-danger",
+                  )}
+                >
+                  {metric.delta}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <section className="panel min-h-[330px] p-5">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-xl font-semibold">Executive Command Center</h1>
+                  <p className="mt-1 text-sm text-muted">Revenue, expenses, forecasts, approvals, and risk signals</p>
+                </div>
+                <Button size="sm">
+                  Report <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="h-[240px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData}>
+                    <defs>
+                      <linearGradient id="revenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                    <YAxis tickLine={false} axisLine={false} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#revenue)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="expenses" stroke="hsl(var(--accent))" fill="transparent" strokeWidth={2} />
+                    <Area type="monotone" dataKey="forecast" stroke="hsl(var(--warning))" fill="transparent" strokeDasharray="4 4" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+
+            <section className="panel p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold">Approval Trail</h2>
+                <FileSignature className="h-4 w-4 text-muted" />
+              </div>
+              <div className="mt-5 space-y-4">
+                {approvalFlow.map((step, index) => (
+                  <div key={step} className="flex items-center gap-3">
+                    <span
+                      className={cn(
+                        "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
+                        index < 3 ? "border-success bg-success/10 text-success" : "border-border bg-background text-muted",
+                      )}
+                    >
+                      {index < 3 ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">{step}</div>
+                      <div className="text-xs text-muted">{index < 3 ? "Completed with digital signature" : "Waiting for authority check"}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <ModuleWorkspace module={module} activeModule={activeModule} viewMode={viewMode} setViewMode={setViewMode} />
+        </section>
+
+        <aside className="space-y-4">
+          <AiPanel />
+          <NotificationPanel />
+          <WorkflowPanel />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function ModuleWorkspace({
+  module,
+  activeModule,
+  viewMode,
+  setViewMode,
+}: {
+  module?: (typeof moduleProfiles)[keyof typeof moduleProfiles];
+  activeModule: string;
+  viewMode: "table" | "card" | "analytics";
+  setViewMode: (mode: "table" | "card" | "analytics") => void;
+}) {
+  const profile = module ?? {
+    title: "CAERUS OS",
+    icon: CheckCircle2,
+    rows: ["Company health", "Metrics", "Approvals", "Risks", "Predictions"],
+    signal: "Unified operating layer active",
+  };
+  const Icon = profile.icon;
+
+  return (
+    <section className="panel p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
+            <Icon className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="truncate text-lg font-semibold">{profile.title}</h2>
+            <p className="truncate text-sm text-muted">{profile.signal}</p>
+          </div>
+        </div>
+        <div className="flex rounded-md border border-border p-1">
+          {(["table", "card", "analytics"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={cn("h-8 rounded px-3 text-sm capitalize", viewMode === mode ? "bg-foreground text-background" : "text-muted hover:text-foreground")}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="overflow-hidden rounded-md border border-border">
+          <table className="w-full min-w-[620px] border-collapse text-sm">
+            <thead className="bg-background text-left text-xs uppercase text-muted">
+              <tr>
+                <th className="px-4 py-3">Capability</th>
+                <th className="px-4 py-3">State</th>
+                <th className="px-4 py-3">Permission</th>
+                <th className="px-4 py-3">Scale Check</th>
+              </tr>
+            </thead>
+            <tbody>
+              {profile.rows.map((row, index) => (
+                <tr key={row} className="border-t border-border">
+                  <td className="px-4 py-3 font-medium">{row}</td>
+                  <td className="px-4 py-3 text-muted">{index % 2 === 0 ? "Live" : "Workflow ready"}</td>
+                  <td className="px-4 py-3 text-muted">{activeModule.toUpperCase()}_{index + 1}</td>
+                  <td className="px-4 py-3 text-success">10,000 employees</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rounded-md border border-border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-semibold">Analytics View</span>
+            <Loader2 className="h-4 w-4 animate-spin text-muted" />
+          </div>
+          <div className="h-[180px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={trendData.slice(0, 5)}>
+                <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                <YAxis hide />
+                <Tooltip />
+                <Bar dataKey="forecast" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AiPanel() {
+  return (
+    <section className="panel p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">CAERUS AI</h2>
+        <span className="rounded-md bg-accent/10 px-2 py-1 text-xs font-medium text-accent">Agents online</span>
+      </div>
+      <div className="mt-4 rounded-md border border-border bg-background p-4">
+        <p className="text-sm font-medium">Why did expenses increase this month?</p>
+        <p className="mt-3 text-sm leading-6 text-muted">
+          Expense growth is concentrated in fleet repairs, procurement rush fees, and payroll overtime. Risk level is medium until CFO approval thresholds clear.
+        </p>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        {["Finance Agent", "HR Agent", "Inventory Agent", "Fleet Agent"].map((agent) => (
+          <span key={agent} className="rounded-md border border-border px-2 py-2 text-muted">
+            {agent}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NotificationPanel() {
+  return (
+    <section className="panel p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Notifications</h2>
+        <span className="text-xs text-muted">Email · In-app · SMS · Push</span>
+      </div>
+      <div className="mt-4 space-y-3">
+        {liveEvents.slice(0, 6).map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.event} className="flex gap-3 rounded-md border border-border p-3">
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <div className="truncate text-xs font-semibold">{item.event}</div>
+                <div className="truncate text-sm text-muted">{item.detail}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function WorkflowPanel() {
+  return (
+    <section className="panel p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">Workflow Builder</h2>
+        <TriangleAlert className="h-4 w-4 text-warning" />
+      </div>
+      <div className="mt-4 space-y-3">
+        {workflowRules.map((rule) => (
+          <div key={rule.when} className="rounded-md border border-border p-3">
+            <div className="text-xs font-semibold text-muted">WHEN</div>
+            <div className="mt-1 text-sm">{rule.when}</div>
+            <div className="mt-3 text-xs font-semibold text-muted">IF</div>
+            <div className="mt-1 text-sm">{rule.if}</div>
+            <div className="mt-3 text-xs font-semibold text-muted">THEN</div>
+            <div className="mt-1 text-sm">{rule.then}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

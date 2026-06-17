@@ -1,0 +1,26 @@
+{
+  "name": "caerus-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-native enterprise operating platform monorepo.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @caerus/web",
+    "dev:web": "npm run dev --workspace @caerus/web",
+    "dev:api": "npm run start:dev --workspace @caerus/api",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:generate": "npm run db:generate --workspace @caerus/database",
+    "db:migrate": "npm run db:migrate --workspace @caerus/database",
+    "db:deploy": "npm run db:deploy --workspace @caerus/database",
+    "db:seed": "npm run db:seed --workspace @caerus/database"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10.0.0"
+  }
+}
