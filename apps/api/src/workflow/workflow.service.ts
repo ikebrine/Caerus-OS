@@ -24,7 +24,9 @@ export class WorkflowService {
         createdBy: actorId,
       },
     });
-    await this.queue.add("workflow-definition-created", { tenantId, workflowId: workflow.id });
+    if (process.env.REDIS_URL) {
+      await this.queue.add("workflow-definition-created", { tenantId, workflowId: workflow.id });
+    }
     await this.audit.record({ tenantId, actorId, module: "workflow", action: "WORKFLOW_CREATED", entityId: workflow.id, afterState: workflow });
     return workflow;
   }
