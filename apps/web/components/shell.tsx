@@ -12,15 +12,21 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
+import { useEffect } from "react";
 import { navigation } from "@/lib/data";
 import { useWorkspaceStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, initialModule }: { children: React.ReactNode; initialModule: string }) {
   const { activeModule, setModule, sidebarCollapsed, toggleSidebar } = useWorkspaceStore();
   const { resolvedTheme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setModule(initialModule);
+  }, [initialModule, setModule]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -31,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex h-16 items-center justify-between px-4">
-          <button className="flex min-w-0 items-center gap-3" onClick={() => setModule("command-center")}>
+          <Link className="flex min-w-0 items-center gap-3" href="/" onClick={() => setModule("command-center")}>
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-foreground text-sm font-bold text-background">
               C
             </span>
@@ -41,16 +47,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="block text-xs text-muted">Enterprise Command</span>
               </span>
             )}
-          </button>
+          </Link>
         </div>
         <nav className="space-y-1 px-3">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = activeModule === item.id;
             return (
-              <button
+              <Link
                 key={item.id}
                 title={item.label}
+                href={item.id === "command-center" ? "/" : `/?module=${item.id}`}
                 onClick={() => setModule(item.id)}
                 className={cn(
                   "flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm transition",
@@ -60,7 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-              </button>
+              </Link>
             );
           })}
         </nav>

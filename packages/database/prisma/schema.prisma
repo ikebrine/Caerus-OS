@@ -767,3 +767,20 @@ model AiInsight {
   createdBy   String?
   deletedAt   DateTime?
 }
+
+model ActivityRecord {
+  id        String    @id @default(cuid())
+  tenantId  String
+  module    String
+  title     String
+  status    String
+  owner     String
+  amount    String?
+  metadata  Json      @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  deletedAt DateTime?
+
+  @@index([tenantId, module, createdAt])
+}

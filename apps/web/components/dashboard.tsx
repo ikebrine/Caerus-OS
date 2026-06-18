@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useEffect } from "react";
 import { approvalFlow, commandMetrics, liveEvents, moduleProfiles, trendData } from "@/lib/data";
 import { useWorkspaceStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -24,8 +25,17 @@ const workflowRules = [
   { when: "Vehicle service date is within 14 days", if: "Mileage exceeds service interval", then: "Notify Fleet Manager" },
 ];
 
-export function CommandCenter() {
-  const { activeModule, viewMode, setViewMode } = useWorkspaceStore();
+export function CommandCenter({ initialModule }: { initialModule: string }) {
+  const { activeModule, setModule, viewMode, setViewMode, addRecord, fetchRecords, backendMessage, recordsLoading } = useWorkspaceStore();
+
+  useEffect(() => {
+    setModule(initialModule);
+  }, [initialModule, setModule]);
+
+  useEffect(() => {
+    void fetchRecords();
+  }, [fetchRecords]);
+
   const module = moduleProfiles[activeModule as keyof typeof moduleProfiles];
 
   return (
@@ -59,6 +69,10 @@ export function CommandCenter() {
               </motion.div>
             ))}
           </div>
+
+          {activeModule !== "command-center" && (
+            <ModuleWorkspace module={module} activeModule={activeModule} viewMode={viewMode} setViewMode={setViewMode} />
+          )}
 
           <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <section className="panel min-h-[330px] p-5">
@@ -118,10 +132,17 @@ export function CommandCenter() {
             </section>
           </div>
 
-          <ModuleWorkspace module={module} activeModule={activeModule} viewMode={viewMode} setViewMode={setViewMode} />
+          {activeModule === "command-center" && (
+            <ModuleWorkspace module={module} activeModule={activeModule} viewMode={viewMode} setViewMode={setViewMode} />
+          )}
         </section>
 
         <aside className="space-y-4">
+          <section className="panel p-4">
+            <div className="text-xs font-medium uppercase text-muted">Backend</div>
+            <div className="mt-2 text-sm font-semibold">{recordsLoading ? "Loading records" : backendMessage}</div>
+          </section>
+          <ActionPanel activeModule={activeModule} addRecord={addRecord} />
           <AiPanel />
           <NotificationPanel />
           <WorkflowPanel />
@@ -142,6 +163,7 @@ function ModuleWorkspace({
   viewMode: "table" | "card" | "analytics";
   setViewMode: (mode: "table" | "card" | "analytics") => void;
 }) {
+  const { records, advanceRecord } = useWorkspaceStore();
   const profile = module ?? {
     title: "CAERUS OS",
     icon: CheckCircle2,
@@ -149,6 +171,7 @@ function ModuleWorkspace({
     signal: "Unified operating layer active",
   };
   const Icon = profile.icon;
+  const visibleRecords = records.filter((record) => record.module === activeModule || activeModule === "command-center").slice(0, 6);
 
   return (
     <section className="panel p-5">
@@ -180,21 +203,37 @@ function ModuleWorkspace({
           <table className="w-full min-w-[620px] border-collapse text-sm">
             <thead className="bg-background text-left text-xs uppercase text-muted">
               <tr>
-                <th className="px-4 py-3">Capability</th>
+                <th className="px-4 py-3">Record</th>
                 <th className="px-4 py-3">State</th>
-                <th className="px-4 py-3">Permission</th>
-                <th className="px-4 py-3">Scale Check</th>
+                <th className="px-4 py-3">Owner</th>
+                <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
             <tbody>
-              {profile.rows.map((row, index) => (
-                <tr key={row} className="border-t border-border">
-                  <td className="px-4 py-3 font-medium">{row}</td>
-                  <td className="px-4 py-3 text-muted">{index % 2 === 0 ? "Live" : "Workflow ready"}</td>
-                  <td className="px-4 py-3 text-muted">{activeModule.toUpperCase()}_{index + 1}</td>
-                  <td className="px-4 py-3 text-success">10,000 employees</td>
+              {visibleRecords.map((record) => (
+                <tr key={record.id} className="border-t border-border">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{record.title}</div>
+                    <div className="text-xs text-muted">{record.amount ?? record.createdAt}</div>
+                  </td>
+                  <td className="px-4 py-3 text-muted">{record.status}</td>
+                  <td className="px-4 py-3 text-muted">{record.owner}</td>
+                  <td className="px-4 py-3">
+                    <Button size="sm" variant="ghost" onClick={() => advanceRecord(record.id)}>
+                      Advance
+                    </Button>
+                  </td>
                 </tr>
               ))}
+              {visibleRecords.length === 0 &&
+                profile.rows.map((row, index) => (
+                  <tr key={row} className="border-t border-border">
+                    <td className="px-4 py-3 font-medium">{row}</td>
+                    <td className="px-4 py-3 text-muted">{index % 2 === 0 ? "Live" : "Workflow ready"}</td>
+                    <td className="px-4 py-3 text-muted">System</td>
+                    <td className="px-4 py-3 text-success">Ready</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
@@ -217,6 +256,67 @@ function ModuleWorkspace({
           </div>
         </div>
       </div>
+    </section>
+  );
+}
+
+function ActionPanel({
+  activeModule,
+  addRecord,
+}: {
+  activeModule: string;
+  addRecord: (record: { module: string; title: string; status: string; owner: string; amount?: string }) => void;
+}) {
+  const templates: Record<string, { title: string; label: string; placeholder: string; status: string; owner: string; amount?: string }> = {
+    people: { title: "Create Employee", label: "Add employee", placeholder: "Employee name and role", status: "Active", owner: "People Ops" },
+    payroll: { title: "Run Payroll", label: "Create payroll run", placeholder: "June salaried payroll", status: "Draft", owner: "Payroll" },
+    finance: { title: "Payment Request", label: "Create payment", placeholder: "Vendor payment title", status: "Requested", owner: "Finance", amount: "$52,000" },
+    inventory: { title: "Stock Action", label: "Create reorder", placeholder: "Item SKU and supplier", status: "Requested", owner: "Inventory" },
+    fleet: { title: "Fleet Service", label: "Schedule service", placeholder: "Vehicle and service type", status: "Scheduled", owner: "Fleet" },
+    documents: { title: "Document Approval", label: "Send for approval", placeholder: "Document title", status: "In Review", owner: "Documents" },
+    chat: { title: "CaerusChat", label: "Send message", placeholder: "Channel or message", status: "Sent", owner: "Team Chat" },
+    sign: { title: "CaeruSign", label: "Create envelope", placeholder: "Envelope title", status: "Awaiting Signature", owner: "Legal" },
+    projects: { title: "Project Task", label: "Create task", placeholder: "Task title", status: "Todo", owner: "Projects" },
+    crm: { title: "CRM Deal", label: "Create deal", placeholder: "Customer or deal name", status: "Pipeline", owner: "Sales" },
+    procurement: { title: "Purchase Request", label: "Create request", placeholder: "Purchase item", status: "Requested", owner: "Procurement" },
+    ai: { title: "AI Report", label: "Generate insight", placeholder: "Question for CEO assistant", status: "Generated", owner: "CAERUS AI" },
+    workflow: { title: "Automation Rule", label: "Publish workflow", placeholder: "WHEN payment > 50000 THEN CFO approval", status: "Published", owner: "Automation" },
+    security: { title: "Security Grant", label: "Create temporary grant", placeholder: "Permission and user", status: "Expires Today", owner: "Security" },
+    "command-center": { title: "Command Action", label: "Create executive action", placeholder: "Action title", status: "Requested", owner: "CEO Office" },
+  };
+  const template = templates[activeModule] ?? templates["command-center"];
+
+  return (
+    <section className="panel p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold">{template.title}</h2>
+        <span className="rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary">Testable</span>
+      </div>
+      <form
+        className="mt-4 space-y-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const input = new FormData(form).get("title")?.toString().trim();
+          addRecord({
+            module: activeModule,
+            title: input || template.placeholder,
+            status: template.status,
+            owner: template.owner,
+            amount: template.amount,
+          });
+          form.reset();
+        }}
+      >
+        <input
+          name="title"
+          className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+          placeholder={template.placeholder}
+        />
+        <Button className="w-full" type="submit">
+          {template.label}
+        </Button>
+      </form>
     </section>
   );
 }
