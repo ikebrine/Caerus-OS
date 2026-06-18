@@ -213,6 +213,10 @@ function ModuleWorkspace({
     status: "Requested",
   };
 
+  if (activeModule === "chat") {
+    return <ChatWorkspace records={visibleRecords} addRecord={addRecord} />;
+  }
+
   return (
     <section className="panel p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -334,6 +338,100 @@ function ModuleWorkspace({
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ChatWorkspace({
+  records,
+  addRecord,
+}: {
+  records: Array<{ id: string; title: string; owner: string; createdAt: string; status: string }>;
+  addRecord: (record: { module: string; title: string; status: string; owner: string; amount?: string }) => Promise<void>;
+}) {
+  return (
+    <section className="panel overflow-hidden">
+      <div className="grid min-h-[620px] lg:grid-cols-[260px_1fr]">
+        <aside className="border-b border-border bg-background p-4 lg:border-b-0 lg:border-r">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold">CaerusChat</h2>
+            <span className="rounded-md bg-success/10 px-2 py-1 text-xs font-medium text-success">Live</span>
+          </div>
+          <div className="space-y-1">
+            {["#general", "#finance-approvals", "#people-ops", "#fleet-desk", "#executive"].map((channel, index) => (
+              <button
+                key={channel}
+                className={cn(
+                  "flex h-10 w-full items-center justify-between rounded-md px-3 text-left text-sm",
+                  index === 1 ? "bg-foreground text-background" : "text-muted hover:bg-surface hover:text-foreground",
+                )}
+              >
+                <span>{channel}</span>
+                {index === 1 && <span className="rounded bg-background/20 px-1.5 py-0.5 text-xs">open</span>}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <div className="flex min-h-[620px] flex-col">
+          <header className="border-b border-border p-4">
+            <div className="text-sm font-semibold">#finance-approvals</div>
+            <div className="mt-1 text-xs text-muted">Payment approvals, budget notes, and signature follow-ups</div>
+          </header>
+
+          <div className="flex-1 space-y-4 overflow-y-auto bg-background p-5">
+            {records.length === 0 && (
+              <div className="rounded-md border border-dashed border-border bg-surface p-6 text-center text-sm text-muted">
+                No messages yet. Start the conversation below.
+              </div>
+            )}
+            {records.map((message) => (
+              <div key={message.id} className="flex gap-3">
+                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-sm font-semibold text-primary">
+                  {message.owner.slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-sm font-semibold">{message.owner}</span>
+                    <span className="text-xs text-muted">{message.createdAt}</span>
+                  </div>
+                  <div className="mt-1 rounded-md border border-border bg-surface px-3 py-2 text-sm leading-6">
+                    {message.title}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <form
+            className="border-t border-border bg-surface p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const data = new FormData(form);
+              const message = data.get("message")?.toString().trim();
+              const sender = data.get("sender")?.toString().trim() || "Team member";
+              if (!message) return;
+              void addRecord({ module: "chat", title: message, owner: sender, status: "Sent" });
+              form.reset();
+            }}
+          >
+            <div className="grid gap-3 md:grid-cols-[180px_1fr_auto]">
+              <input
+                name="sender"
+                className="h-11 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Your name"
+              />
+              <input
+                name="message"
+                className="h-11 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Write a message"
+              />
+              <Button type="submit">Send</Button>
+            </div>
+          </form>
         </div>
       </div>
     </section>
