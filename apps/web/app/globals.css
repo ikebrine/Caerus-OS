@@ -51,7 +51,9 @@ textarea {
 
 @layer components {
   .panel {
-    @apply border border-border bg-surface shadow-panel;
     border-radius: 8px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--surface));
+    box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
   }
 }
