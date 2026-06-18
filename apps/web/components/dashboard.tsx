@@ -180,7 +180,7 @@ function ModuleWorkspace({
   viewMode: "table" | "card" | "analytics";
   setViewMode: (mode: "table" | "card" | "analytics") => void;
 }) {
-  const { records, advanceRecord } = useWorkspaceStore();
+  const { records, advanceRecord, addRecord } = useWorkspaceStore();
   const profile = module ?? {
     title: "CAERUS OS",
     icon: CheckCircle2,
@@ -216,7 +216,48 @@ function ModuleWorkspace({
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="overflow-hidden rounded-md border border-border">
+        <div className="space-y-4">
+          {activeModule !== "command-center" && (
+            <form
+              className="grid gap-3 rounded-md border border-border bg-background p-4 md:grid-cols-[1fr_180px_150px_auto]"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const data = new FormData(form);
+                const title = data.get("title")?.toString().trim();
+                const owner = data.get("owner")?.toString().trim();
+                const amount = data.get("amount")?.toString().trim();
+                if (!title) return;
+                void addRecord({
+                  module: activeModule,
+                  title,
+                  owner: owner || "Unassigned",
+                  amount: amount || undefined,
+                  status: activeModule === "sign" ? "Awaiting Signature" : activeModule === "chat" ? "Sent" : "Requested",
+                });
+                form.reset();
+              }}
+            >
+              <input
+                name="title"
+                className="h-10 rounded-md border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder={`New ${profile.title} entry`}
+              />
+              <input
+                name="owner"
+                className="h-10 rounded-md border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Owner"
+              />
+              <input
+                name="amount"
+                className="h-10 rounded-md border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Amount optional"
+              />
+              <Button type="submit">Create</Button>
+            </form>
+          )}
+
+          <div className="overflow-hidden rounded-md border border-border">
           <table className="w-full min-w-[620px] border-collapse text-sm">
             <thead className="bg-background text-left text-xs uppercase text-muted">
               <tr>
@@ -253,6 +294,7 @@ function ModuleWorkspace({
                 ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         <div className="rounded-md border border-border p-4">
