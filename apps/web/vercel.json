@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && npm run db:generate && npm run db:push && npm run build --workspace @caerus/web",
+  "buildCommand": "cd ../.. && npm run db:generate && npm run build --workspace @caerus/web",
   "installCommand": "cd ../.. && npm install --include=dev",
   "framework": "nextjs"
 }
