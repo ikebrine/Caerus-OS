@@ -189,6 +189,29 @@ function ModuleWorkspace({
   };
   const Icon = profile.icon;
   const visibleRecords = records.filter((record) => record.module === activeModule || activeModule === "command-center").slice(0, 6);
+  const formLabels: Record<string, { title: string; owner: string; amount: string; button: string; status: string }> = {
+    people: { title: "Employee name / role", owner: "Department", amount: "Salary optional", button: "Add Employee", status: "Active" },
+    payroll: { title: "Payroll period", owner: "Payroll owner", amount: "Net pay optional", button: "Create Payroll", status: "Draft" },
+    finance: { title: "Payment request", owner: "Vendor or requester", amount: "Amount", button: "Create Payment", status: "Requested" },
+    inventory: { title: "Item / SKU", owner: "Warehouse", amount: "Quantity optional", button: "Add Stock Entry", status: "Recorded" },
+    fleet: { title: "Vehicle / service", owner: "Driver or manager", amount: "Cost optional", button: "Log Fleet Entry", status: "Scheduled" },
+    documents: { title: "Document title", owner: "Owner", amount: "Version optional", button: "Add Document", status: "Draft" },
+    chat: { title: "Message or channel", owner: "Sender", amount: "Attachment optional", button: "Post Message", status: "Sent" },
+    sign: { title: "Envelope / document", owner: "Signer", amount: "Value optional", button: "Send for Signature", status: "Awaiting Signature" },
+    projects: { title: "Task or project", owner: "Assignee", amount: "Budget optional", button: "Create Task", status: "Todo" },
+    crm: { title: "Customer / deal", owner: "Account owner", amount: "Deal value", button: "Create Deal", status: "Pipeline" },
+    procurement: { title: "Purchase request", owner: "Supplier", amount: "Estimated cost", button: "Create Request", status: "Requested" },
+    ai: { title: "Report question", owner: "Requested by", amount: "Priority optional", button: "Create AI Request", status: "Queued" },
+    workflow: { title: "Automation rule", owner: "Process owner", amount: "Threshold optional", button: "Create Workflow", status: "Draft" },
+    security: { title: "Permission / user", owner: "Approver", amount: "Duration optional", button: "Create Grant", status: "Pending" },
+  };
+  const formLabel = formLabels[activeModule] ?? {
+    title: "Entry title",
+    owner: "Owner",
+    amount: "Amount optional",
+    button: "Create Entry",
+    status: "Requested",
+  };
 
   return (
     <section className="panel p-5">
@@ -233,7 +256,7 @@ function ModuleWorkspace({
                   title,
                   owner: owner || "Unassigned",
                   amount: amount || undefined,
-                  status: activeModule === "sign" ? "Awaiting Signature" : activeModule === "chat" ? "Sent" : "Requested",
+                  status: formLabel.status,
                 });
                 form.reset();
               }}
@@ -241,19 +264,19 @@ function ModuleWorkspace({
               <input
                 name="title"
                 className="h-10 rounded-md border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                placeholder={`New ${profile.title} entry`}
+                placeholder={formLabel.title}
               />
               <input
                 name="owner"
                 className="h-10 rounded-md border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Owner"
+                placeholder={formLabel.owner}
               />
               <input
                 name="amount"
                 className="h-10 rounded-md border border-border bg-surface px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Amount optional"
+                placeholder={formLabel.amount}
               />
-              <Button type="submit">Create</Button>
+              <Button type="submit">{formLabel.button}</Button>
             </form>
           )}
 
@@ -283,15 +306,13 @@ function ModuleWorkspace({
                   </td>
                 </tr>
               ))}
-              {visibleRecords.length === 0 &&
-                profile.rows.map((row, index) => (
-                  <tr key={row} className="border-t border-border">
-                    <td className="px-4 py-3 font-medium">{row}</td>
-                    <td className="px-4 py-3 text-muted">{index % 2 === 0 ? "Live" : "Workflow ready"}</td>
-                    <td className="px-4 py-3 text-muted">System</td>
-                    <td className="px-4 py-3 text-success">Ready</td>
-                  </tr>
-                ))}
+              {visibleRecords.length === 0 && (
+                <tr className="border-t border-border">
+                  <td className="px-4 py-8 text-center text-muted" colSpan={4}>
+                    No entries yet. Use the form above to create the first live {profile.title} record.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           </div>

@@ -29,14 +29,6 @@ type WorkspaceState = {
   advanceRecord: (id: string) => Promise<void>;
 };
 
-const seededRecords: DemoRecord[] = [
-  { id: "rec-1", module: "people", title: "Amina Cole · Senior Analyst", status: "Active", owner: "People Ops", createdAt: "Today" },
-  { id: "rec-2", module: "finance", title: "Vendor renewal payment", status: "Manager Approval", owner: "Finance", amount: "$48,200", createdAt: "Today" },
-  { id: "rec-3", module: "chat", title: "#finance-approvals", status: "12 unread", owner: "Avery Stone", createdAt: "Today" },
-  { id: "rec-4", module: "sign", title: "Supplier master agreement", status: "Awaiting Signature", owner: "Legal", createdAt: "Today" },
-  { id: "rec-5", module: "workflow", title: "CFO approval above $50,000", status: "Published", owner: "Automation", createdAt: "Today" },
-];
-
 const formatRecord = (record: DemoRecord & { createdAt: string | Date }) => {
   const createdAt = new Date(record.createdAt);
   return {
@@ -49,9 +41,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   activeModule: "command-center",
   viewMode: "analytics",
   sidebarCollapsed: false,
-  records: seededRecords,
+  records: [],
   recordsLoading: false,
-  backendMessage: "Demo data loaded",
+  backendMessage: "Ready for live entries",
   setModule: (activeModule) => set({ activeModule }),
   setViewMode: (viewMode) => set({ viewMode }),
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
