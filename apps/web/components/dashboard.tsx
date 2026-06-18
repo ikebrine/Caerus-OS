@@ -37,115 +37,132 @@ export function CommandCenter({ initialModule }: { initialModule: string }) {
   }, [fetchRecords]);
 
   const module = moduleProfiles[activeModule as keyof typeof moduleProfiles];
+  const isCommandCenter = activeModule === "command-center";
 
   return (
     <div className="px-6 py-6">
-      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <section className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-5">
-            {commandMetrics.map((metric, index) => (
-              <motion.div
-                key={metric.label}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.04 }}
-                className="panel p-4"
-              >
-                <div className="text-xs font-medium uppercase text-muted">{metric.label}</div>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-2xl font-semibold">{metric.value}</span>
-                  <span className="text-sm text-muted">{metric.unit}</span>
-                </div>
-                <div
-                  className={cn(
-                    "mt-3 text-xs font-medium",
-                    metric.tone === "success" && "text-success",
-                    metric.tone === "warning" && "text-warning",
-                    metric.tone === "danger" && "text-danger",
-                  )}
-                >
-                  {metric.delta}
-                </div>
-              </motion.div>
-            ))}
-          </div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{isCommandCenter ? "Command Center" : module?.title ?? "Workspace"}</h1>
+          <p className="mt-1 text-sm text-muted">
+            {isCommandCenter ? "Company health, approvals, risks, and live operating signals." : module?.signal ?? "Focused module workspace."}
+          </p>
+        </div>
+        <span className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-muted">{recordsLoading ? "Loading" : backendMessage}</span>
+      </div>
 
-          {activeModule !== "command-center" && (
+      <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
+        <section className="space-y-4">
+          {isCommandCenter && (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {commandMetrics.map((metric, index) => (
+                <motion.div
+                  key={metric.label}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 }}
+                  className="panel p-4"
+                >
+                  <div className="text-xs font-medium uppercase text-muted">{metric.label}</div>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-2xl font-semibold">{metric.value}</span>
+                    <span className="text-sm text-muted">{metric.unit}</span>
+                  </div>
+                  <div
+                    className={cn(
+                      "mt-3 text-xs font-medium",
+                      metric.tone === "success" && "text-success",
+                      metric.tone === "warning" && "text-warning",
+                      metric.tone === "danger" && "text-danger",
+                    )}
+                  >
+                    {metric.delta}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {!isCommandCenter && (
             <ModuleWorkspace module={module} activeModule={activeModule} viewMode={viewMode} setViewMode={setViewMode} />
           )}
 
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-            <section className="panel min-h-[330px] p-5">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <div>
-                  <h1 className="text-xl font-semibold">Executive Command Center</h1>
-                  <p className="mt-1 text-sm text-muted">Revenue, expenses, forecasts, approvals, and risk signals</p>
-                </div>
-                <Button size="sm">
-                  Report <ArrowRight className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData}>
-                    <defs>
-                      <linearGradient id="revenue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
-                    <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                    <YAxis tickLine={false} axisLine={false} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#revenue)" strokeWidth={2} />
-                    <Area type="monotone" dataKey="expenses" stroke="hsl(var(--accent))" fill="transparent" strokeWidth={2} />
-                    <Area type="monotone" dataKey="forecast" stroke="hsl(var(--warning))" fill="transparent" strokeDasharray="4 4" strokeWidth={2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </section>
-
-            <section className="panel p-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-semibold">Approval Trail</h2>
-                <FileSignature className="h-4 w-4 text-muted" />
-              </div>
-              <div className="mt-5 space-y-4">
-                {approvalFlow.map((step, index) => (
-                  <div key={step} className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
-                        index < 3 ? "border-success bg-success/10 text-success" : "border-border bg-background text-muted",
-                      )}
-                    >
-                      {index < 3 ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{step}</div>
-                      <div className="text-xs text-muted">{index < 3 ? "Completed with digital signature" : "Waiting for authority check"}</div>
-                    </div>
+          {isCommandCenter && (
+            <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+              <section className="panel min-h-[330px] p-5">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold">Executive Overview</h2>
+                    <p className="mt-1 text-sm text-muted">Revenue, expenses, forecasts, approvals, and risk signals</p>
                   </div>
-                ))}
-              </div>
-            </section>
-          </div>
+                  <Button size="sm">
+                    Report <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendData}>
+                      <defs>
+                        <linearGradient id="revenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                      <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                      <YAxis tickLine={false} axisLine={false} />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fill="url(#revenue)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="expenses" stroke="hsl(var(--accent))" fill="transparent" strokeWidth={2} />
+                      <Area type="monotone" dataKey="forecast" stroke="hsl(var(--warning))" fill="transparent" strokeDasharray="4 4" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </section>
 
-          {activeModule === "command-center" && (
+              <section className="panel p-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold">Approval Trail</h2>
+                  <FileSignature className="h-4 w-4 text-muted" />
+                </div>
+                <div className="mt-5 space-y-4">
+                  {approvalFlow.map((step, index) => (
+                    <div key={step} className="flex items-center gap-3">
+                      <span
+                        className={cn(
+                          "grid h-8 w-8 shrink-0 place-items-center rounded-md border",
+                          index < 3 ? "border-success bg-success/10 text-success" : "border-border bg-background text-muted",
+                        )}
+                      >
+                        {index < 3 ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{step}</div>
+                        <div className="text-xs text-muted">{index < 3 ? "Completed with digital signature" : "Waiting for authority check"}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {isCommandCenter && (
             <ModuleWorkspace module={module} activeModule={activeModule} viewMode={viewMode} setViewMode={setViewMode} />
           )}
         </section>
 
         <aside className="space-y-4">
-          <section className="panel p-4">
-            <div className="text-xs font-medium uppercase text-muted">Backend</div>
-            <div className="mt-2 text-sm font-semibold">{recordsLoading ? "Loading records" : backendMessage}</div>
-          </section>
           <ActionPanel activeModule={activeModule} addRecord={addRecord} />
-          <AiPanel />
-          <NotificationPanel />
-          <WorkflowPanel />
+          {isCommandCenter ? (
+            <>
+              <AiPanel />
+              <NotificationPanel />
+              <WorkflowPanel />
+            </>
+          ) : (
+            <NotificationPanel compact />
+          )}
         </aside>
       </div>
     </div>
@@ -345,7 +362,7 @@ function AiPanel() {
   );
 }
 
-function NotificationPanel() {
+function NotificationPanel({ compact = false }: { compact?: boolean }) {
   return (
     <section className="panel p-5">
       <div className="flex items-center justify-between">
@@ -353,7 +370,7 @@ function NotificationPanel() {
         <span className="text-xs text-muted">Email · In-app · SMS · Push</span>
       </div>
       <div className="mt-4 space-y-3">
-        {liveEvents.slice(0, 6).map((item) => {
+        {liveEvents.slice(0, compact ? 3 : 6).map((item) => {
           const Icon = item.icon;
           return (
             <div key={item.event} className="flex gap-3 rounded-md border border-border p-3">

@@ -59,17 +59,20 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     set({ recordsLoading: true, backendMessage: "Connecting to Supabase" });
     try {
       const response = await fetch("/api/records", { cache: "no-store" });
-      if (!response.ok) throw new Error("Unable to load records");
+      if (!response.ok) {
+        const error = (await response.json().catch(() => ({ error: "Unable to load records" }))) as { error?: string };
+        throw new Error(error.error ?? "Unable to load records");
+      }
       const data = (await response.json()) as { records: DemoRecord[] };
       set({
         records: data.records.map(formatRecord),
         recordsLoading: false,
         backendMessage: "Live Supabase backend connected",
       });
-    } catch {
+    } catch (error) {
       set({
         recordsLoading: false,
-        backendMessage: "Using local fallback until DATABASE_URL and tables are ready",
+        backendMessage: error instanceof Error ? error.message : "Using local fallback until DATABASE_URL and tables are ready",
       });
     }
   },
@@ -86,14 +89,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(record),
       });
-      if (!response.ok) throw new Error("Unable to save record");
+      if (!response.ok) {
+        const error = (await response.json().catch(() => ({ error: "Unable to save record" }))) as { error?: string };
+        throw new Error(error.error ?? "Unable to save record");
+      }
       const data = (await response.json()) as { record: DemoRecord };
       set((state) => ({
         records: [formatRecord(data.record), ...state.records.filter((item) => item.id !== optimisticRecord.id)],
         backendMessage: "Saved to Supabase",
       }));
-    } catch {
-      set({ backendMessage: "Saved locally only. Check DATABASE_URL and database tables." });
+    } catch (error) {
+      set({ backendMessage: error instanceof Error ? error.message : "Saved locally only. Check DATABASE_URL and database tables." });
     }
   },
   advanceRecord: async (id) => {
@@ -104,14 +110,17 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (!response.ok) throw new Error("Unable to update record");
+      if (!response.ok) {
+        const error = (await response.json().catch(() => ({ error: "Unable to update record" }))) as { error?: string };
+        throw new Error(error.error ?? "Unable to update record");
+      }
       const data = (await response.json()) as { record: DemoRecord };
       set((state) => ({
         records: state.records.map((record) => (record.id === id ? formatRecord(data.record) : record)),
         backendMessage: "Updated in Supabase",
       }));
-    } catch {
-      set({ backendMessage: "Update failed. Check DATABASE_URL and database tables." });
+    } catch (error) {
+      set({ backendMessage: error instanceof Error ? error.message : "Update failed. Check DATABASE_URL and database tables." });
     }
   },
 }));

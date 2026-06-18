@@ -28,60 +28,76 @@ async function ensureDefaults() {
 }
 
 export async function GET() {
-  await ensureDefaults();
-  const records = await prisma.activityRecord.findMany({
-    where: { tenantId, deletedAt: null },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
-  return NextResponse.json({ records });
+  try {
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ error: "DATABASE_URL is missing in Vercel" }, { status: 500 });
+    }
+
+    await ensureDefaults();
+    const records = await prisma.activityRecord.findMany({
+      where: { tenantId, deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+    return NextResponse.json({ records });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to connect to Supabase" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as Partial<{
-    module: string;
-    title: string;
-    status: string;
-    owner: string;
-    amount: string;
-  }>;
+  try {
+    const body = (await request.json()) as Partial<{
+      module: string;
+      title: string;
+      status: string;
+      owner: string;
+      amount: string;
+    }>;
 
-  if (!body.module || !body.title || !body.status || !body.owner) {
-    return NextResponse.json({ error: "module, title, status, and owner are required" }, { status: 400 });
+    if (!body.module || !body.title || !body.status || !body.owner) {
+      return NextResponse.json({ error: "module, title, status, and owner are required" }, { status: 400 });
+    }
+
+    const record = await prisma.activityRecord.create({
+      data: {
+        tenantId,
+        module: body.module,
+        title: body.title,
+        status: body.status,
+        owner: body.owner,
+        amount: body.amount,
+        createdBy: "vercel-demo",
+      },
+    });
+
+    return NextResponse.json({ record }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to save record" }, { status: 500 });
   }
-
-  const record = await prisma.activityRecord.create({
-    data: {
-      tenantId,
-      module: body.module,
-      title: body.title,
-      status: body.status,
-      owner: body.owner,
-      amount: body.amount,
-      createdBy: "vercel-demo",
-    },
-  });
-
-  return NextResponse.json({ record }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
-  const body = (await request.json()) as Partial<{ id: string }>;
-  if (!body.id) {
-    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  try {
+    const body = (await request.json()) as Partial<{ id: string }>;
+    if (!body.id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
+    }
+
+    const existing = await prisma.activityRecord.findFirst({
+      where: { id: body.id, tenantId, deletedAt: null },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "record not found" }, { status: 404 });
+    }
+
+    const record = await prisma.activityRecord.update({
+      where: { id: existing.id },
+      data: { status: nextStatus(existing.status) },
+    });
+
+    return NextResponse.json({ record });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to update record" }, { status: 500 });
   }
-
-  const existing = await prisma.activityRecord.findFirst({
-    where: { id: body.id, tenantId, deletedAt: null },
-  });
-  if (!existing) {
-    return NextResponse.json({ error: "record not found" }, { status: 404 });
-  }
-
-  const record = await prisma.activityRecord.update({
-    where: { id: existing.id },
-    data: { status: nextStatus(existing.status) },
-  });
-
-  return NextResponse.json({ record });
 }
